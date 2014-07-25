@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+"""bt: the bittorrent shell library.
+
+Usage:
+    bt <command> [<args>...]
+
+Options:
+    -h --help       Show this screen.
+    -v --version    Show version.
+
+Available commands are:
+    bj [FILE]   Convert bencode to JSON. If FILE is `-`
+                or not specified, reads from STDIN.
+                The `pieces` hash is converted to
+                a hex-encoded string, for convenience.
+                The JSON can then be easily modified with
+                tools such as `jq`, e.g.
+
+                ```
+                bt bj example.torrent |\\
+                jq ".info.\\"update-url\\" = \\"$URL\\"" \|
+                bt jb > example-bep39.torrent
+                ```
+
+    jb [FILE]   Convert JSON to bencode. If FILE is `-`
+                or not specified, reads from STDIN.
+                The input JSON does not have to
+                be a valid .torrent file, but if it
+                contains an `info.pieces` value, it will
+                be decoded as a hex string back into raw
+                bytes. Thus, `bt bj example.torrent | bt jb`
+                will output `example.torrent` unchanged.
+
+
+"""
+from docopt import docopt
+import bencode3, json, sys
+
+arguments = docopt(__doc__, version="bt 0.1")
+
+argv = arguments["<args>"]
+
+if len(argv) > 0 and argv[0] != "-":
+    i = open(argv[0], 'rb')
+else:
+    i = sys.stdin.buffer
+
+if arguments["<command>"] == "jb":
+    j = json.loads(i.read().decode('utf8'))
+    # hex-decode pieces
+    if "info" in j and "pieces" in j["info"]:
+        j["info"]["pieces"] = bytes.fromhex(j["info"]["pieces"])
+    sys.stdout.buffer.write(bencode3.bencode(j))
+elif arguments["<command>"] == "bj":
+    s = i.read()
+    b = bencode3.bdecode(s)
+    print(json.dumps(b))
+
