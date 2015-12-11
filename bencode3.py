@@ -29,7 +29,7 @@ def decode_int(x, f):
 def decode_string(x, f):
     colon = x.index(b':', f)
     n = int(x[f:colon])
-    if x[f] == '0' and colon != f+1:
+    if chr(x[f]) == '0' and colon != f+1:
         raise ValueError
     colon += 1
     try:
@@ -40,8 +40,8 @@ def decode_string(x, f):
 
 def decode_list(x, f):
     r, f = [], f+1
-    while x[f] != 'e':
-        v, f = decode_func[x[f]](x, f)
+    while chr(x[f]) != 'e':
+        v, f = decode_func[chr(x[f])](x, f)
         r.append(v)
     return (r, f + 1)
 
@@ -70,8 +70,8 @@ decode_func['9'] = decode_string
 def bdecode(x):
     try:
         r, l = decode_func[chr(x[0])](x, 0)
-    except (IndexError, KeyError, ValueError):
-        raise BTFailure("not a valid bencoded string")
+    except (IndexError, KeyError, ValueError) as e:
+        raise BTFailure("not a valid bencoded string", e)
     if l != len(x):
         raise BTFailure("invalid bencoded value (data after valid prefix)")
     return r

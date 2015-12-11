@@ -34,7 +34,9 @@ Available commands are:
 
 """
 from docopt import docopt
-import bencode3, json, sys
+import bencode3
+import json
+import sys
 
 arguments = docopt(__doc__, version="bt 0.1")
 
@@ -49,10 +51,17 @@ if arguments["<command>"] == "jb":
     j = json.loads(i.read().decode('utf8'))
     # hex-decode pieces
     if "info" in j and "pieces" in j["info"]:
-        j["info"]["pieces"] = bytes.fromhex(j["info"]["pieces"])
+        if type(j["info"]["pieces"]) == list:
+            j["info"]["pieces"] = bytes.fromhex(''.join(j["info"]["pieces"]))
+        else:
+            j["info"]["pieces"] = bytes.fromhex(j["info"]["pieces"])
     sys.stdout.buffer.write(bencode3.bencode(j))
 elif arguments["<command>"] == "bj":
     s = i.read()
     b = bencode3.bdecode(s)
+    # break pieces into 40-char hex strings, so it's not
+    # so unwieldly as output.
+    if "info" in b and "pieces" in b["info"]:
+        h = b["info"]["pieces"]
+        b["info"]["pieces"] = [h[k:k+40] for k in range(0, len(h), 40)]
     print(json.dumps(b))
-
